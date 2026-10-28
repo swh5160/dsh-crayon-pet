@@ -1,9 +1,10 @@
 // Component harness: runs the real client.js against a stub loader + real React,
 // so pose/label/walk behaviour can be checked without the live app.
-//   node art/harness.mjs <step> [--shot out.png]
-// steps: idle | work | poke | settle | walk | walked
+//   node art/harness.mjs <step> [--shot out.png] [--clean]
+// steps: idle | work | poke | settle | pancake | carry | carryWalk | walk | walked
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -51,6 +52,18 @@ const steps = {
     clickPet();
     await sleep(3200);
     diag({ bubble: bubble(), state: state(), expect: 'work' });`,
+  carry: `
+    render();
+    await sleep(500);
+    diag({ bubble: bubble(), state: state(), expect: 'pancake by default' });`,
+  carryWalk: `
+    render();
+    await sleep(300);
+    openMenu();
+    await sleep(200);
+    clickText(STROLL);
+    await sleep(260);
+    diag({ bubble: bubble(), state: state(), walkAttr: walkAttr(), expect: 'walking with the pancake' });`,
   pancake: `
     render();
     await sleep(250);
@@ -58,7 +71,7 @@ const steps = {
     await sleep(200);
     const hit = clickText(PANCAKE);
     await sleep(400);
-    diag({ chip: hit, bubble: bubble(), state: state() });`,
+    diag({ chip: hit, bubble: bubble(), state: state(), expect: 'idle after putting it down' });`,
   walk: `
     render();
     await sleep(300);
@@ -149,10 +162,12 @@ writeFileSync(page, html, 'utf8');
 const url = `file:///${page.replace(/\\/g, '/')}`;
 // A step that shows a temporary reaction must be captured inside its window.
 const budget = step === 'pancake' ? 2000 : 12000;
+// A fresh profile per run keeps localStorage out of the way (carry defaults on).
+const profile = mkdtempSync(join(tmpdir(), 'cp-harness-'));
 
 const dom = execFileSync(CHROME, [
   '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
-  '--no-default-browser-check', `--virtual-time-budget=${budget}`,
+  '--no-default-browser-check', `--user-data-dir=${profile}`, `--virtual-time-budget=${budget}`,
   '--window-size=900,700', '--dump-dom', url,
 ], { stdio: 'pipe' }).toString('utf8');
 writeFileSync(join(out, `harness-${step}.dom.html`), dom, 'utf8');

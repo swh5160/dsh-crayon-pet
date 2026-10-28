@@ -161,7 +161,10 @@ try {
       const [hidden, setHidden] = useState(!!saved.hidden);
       const [customs, setCustoms] = useState([]);
       const [menu, setMenu] = useState(null);
-      const [state, setState] = useState('idle');
+      // Holding the jianbing is the default look: the kid carries it around, and
+      // every temporary pose falls back to it (or to `work` while the agent runs).
+      const [carry, setCarry] = useState(saved.carry !== false);
+      const [state, setState] = useState(saved.carry !== false ? 'pancake' : 'idle');
       const [blink, setBlink] = useState(false);
       const [walk, setWalk] = useState({ ms: 0, dir: 1 });
 
@@ -172,8 +175,9 @@ try {
       const walkEndRef = useRef(null);
       const walkingRef = useRef(false);
       const runningRef = useRef(false);
+      const carryRef = useRef(saved.carry !== false);
       const lastTouch = useRef(Date.now());
-      const stateRef = useRef('idle');
+      const stateRef = useRef(state);
       stateRef.current = state;
 
       useEffect(() => { posRef.current = pos; }, [pos]);
@@ -219,6 +223,14 @@ try {
         })
         : false;
       runningRef.current = running;
+      carryRef.current = carry;
+
+      // Where the pet rests: working wins, otherwise the carried pancake.
+      const baseState = () => {
+        if (runningRef.current) return 'work';
+        return carryRef.current ? 'pancake' : 'idle';
+      };
+      const isResting = (name) => name === 'idle' || name === 'pancake';
 
       const stopWalk = useCallback(() => {
         if (walkEndRef.current) {
@@ -238,7 +250,7 @@ try {
         setState(name);
         if (tempRef.current) window.clearTimeout(tempRef.current);
         tempRef.current = window.setTimeout(() => {
-          setState((cur) => (cur === name ? (runningRef.current ? 'work' : 'idle') : cur));
+          setState((cur) => (cur === name ? baseState() : cur));
         }, ms);
       }, []);
 
@@ -291,7 +303,7 @@ try {
       useEffect(() => {
         const id = window.setInterval(() => {
           if (hidden || runningRef.current) return;
-          if (walkingRef.current || stateRef.current !== 'idle') return;
+          if (walkingRef.current || !isResting(stateRef.current)) return;
           if (Date.now() - lastTouch.current < 6000) return;
           if (Math.random() > 0.7) return;
           startWalk();
@@ -301,7 +313,7 @@ try {
 
       useEffect(() => {
         const id = window.setInterval(() => {
-          if (running || walkingRef.current || stateRef.current !== 'idle') return;
+          if (running || walkingRef.current || !isResting(stateRef.current)) return;
           const idle = Date.now() - lastTouch.current;
           if (idle > 240000) setState('sleeping');
           else if (idle > 150000) setState('sleep');
@@ -311,8 +323,8 @@ try {
 
       useEffect(() => {
         const id = window.setInterval(() => {
-          if (running || walkingRef.current || stateRef.current !== 'idle' || Math.random() > 0.45) return;
-          const pick = ['tease', 'face', 'yawn', 'sneeze', 'snack', 'eat', 'pancake'][Math.floor(Math.random() * 7)];
+          if (running || walkingRef.current || !isResting(stateRef.current) || Math.random() > 0.45) return;
+          const pick = ['tease', 'face', 'yawn', 'sneeze', 'snack', 'eat'][Math.floor(Math.random() * 6)];
           setTemp(pick, 2800);
         }, 21000);
         return () => window.clearInterval(id);
@@ -320,7 +332,7 @@ try {
 
       useEffect(() => {
         const id = window.setInterval(() => {
-          if (stateRef.current !== 'idle') return;
+          if (!isResting(stateRef.current)) return;
           setBlink(true);
           window.setTimeout(() => setBlink(false), 150);
         }, 3600);
@@ -353,7 +365,7 @@ try {
       const poke = useCallback(() => {
         lastTouch.current = Date.now();
         stopWalk();
-        if (stateRef.current === 'sleep' || stateRef.current === 'sleeping') { setState('idle'); return; }
+        if (stateRef.current === 'sleep' || stateRef.current === 'sleeping') { setState(baseState()); return; }
         const pick = ['tease', 'heart', 'face', 'heart', 'sneeze'][Math.floor(Math.random() * 5)];
         setTemp(pick, 2000);
       }, [setTemp, stopWalk]);
@@ -422,7 +434,8 @@ try {
           : { transition: 'none' },
       );
 
-      const label = walking ? t('walk') : ((dict.states && dict.states[state]) || state);
+      // While it carries the jianbing the bubble keeps saying so, even mid-stroll.
+      const label = (walking && !carry) ? t('walk') : ((dict.states && dict.states[state]) || state);
 
       const art = h('div', {
         className: 'cp-art',
@@ -457,14 +470,27 @@ try {
       },
       h('div', { className: 'cp-menu-head' },
         h('strong', null, active ? active.name : t('builtinName')),
-        h('span', null, 'v1.2'),
+        h('span', null, 'v1.3'),
       ),
       h('div', { className: 'cp-sec' }, t('state')),
-      chips(ORDER.map((k) => ({ key: k, label: (dict.states && dict.states[k]) || k })), state, (k) => {
-        setMenu(null);
-        stopWalk();
-        setTemp(k, 4200);
-      }),
+      chips(
+        ORDER.map((k) => ({ key: k, label: (dict.states && dict.states[k]) || k })),
+        state,
+        (k) => {
+          setMenu(null);
+          stopWalk();
+          if (k === 'pancake') {
+            // The jianbing is a carry mode, not a one-shot reaction: toggle it.
+            const next = !carryRef.current;
+            carryRef.current = next;
+            setCarry(next);
+            saveStore({ carry: next });
+            setState(next ? 'pancake' : 'idle');
+            return;
+          }
+          setTemp(k, 4200);
+        },
+      ),
       h('div', { className: 'cp-sec' }, t('size')),
       chips(dict.sizes.map((label2, i) => ({ key: 's' + i, label: label2 })), 's' + scaleIdx, (k) => {
         const idx = Number(k.slice(1));

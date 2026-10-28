@@ -9,7 +9,7 @@ Draggable, pokes back, follows the agent's work state, and takes your own skins.
 
 ```powershell
 # from GitHub (pin a tag to be safe)
-dsh plugin --profile web add github:swh5160/dsh-crayon-pet#v1.2.0
+dsh plugin --profile web add github:swh5160/dsh-crayon-pet#v1.3.0
 
 # or from npm
 dsh plugin --profile web add dsh-crayon-pet
@@ -33,32 +33,39 @@ dsh plugin --profile web remove dsh-crayon-pet
 | left click | random reaction (tease / heart / silly face / sneeze); wakes it up if asleep; afterwards it returns to whatever it was doing — poking it while the agent works sends it back to `work`, not `idle` |
 | drag | move it; the position is remembered |
 | right click | menu: pose, size, skin, stroll, hide |
-| 溜达一下 / stroll | send it for a walk right now |
+| 我要吃煎饼 / pancake | **carry mode** — the pet holds the jianbing (on by default). Click it again to put the pancake down |
+| 溜达一下 / stroll | send it for a walk right now; while carrying, it strolls with the pancake in hand |
 | double click | blow a heart |
 | after hiding | a small translucent dot stays in the corner; click it to bring the pet back |
 
-A small speech bubble above its head names the current state (干活中 / 干完啦 / 困了 /
-溜达中 …), so the pet doubles as a status indicator.
+By default the kid is holding the pancake, so 我要吃煎饼 is the resting pose and the
+bubble keeps saying it — even while wandering. The pancake stays put while the
+agent works, and comes back when the run ends.
+
+A small speech bubble above its head names the current state (我要吃煎饼 / 干活中 /
+干完啦 / 困了 / 溜达中 …), so the pet doubles as a status indicator.
 
 ![label](docs/label.png)
 
 Automatic behaviour:
 
 - any session running → `work` (typing on a laptop)
-- run finishes → `work-success` with sparkles for 3.6 s, then `idle`
-- idle for 2.5 min → `sleep`, 4 min → `sleeping`
+- run finishes → `work-success` with sparkles for 3.6 s, then the resting pose
+- resting for 2.5 min → `sleep`, 4 min → `sleeping`; a poke wakes it back to the pancake
 - roughly every 20 s it does something on its own (yawn, snack, tease)
-- while idle it wanders across the screen every so often: it walks to a random
+- while resting it wanders across the screen every so often: it walks to a random
   spot with a bobbing stride and turns to face the direction it moves in
-- idle has a breathing bob and blinks every 3.6 s
+- resting has a breathing bob, and it blinks every 3.6 s when not holding the pancake
 
 ## States
 
-`idle, tease, eat, pancake, heart, face, work, work-success, work-fail, sleep, sleeping, snack, sneeze, yawn`
+`pancake, idle, tease, eat, heart, face, work, work-success, work-fail, sleep, sleeping, snack, sneeze, yawn`
 
-`pancake` is the kid holding a folded jianbing in both hands, shouting for it —
-the bubble reads 我要吃煎饼. Pick it from the menu, or wait for the pet to crave
-one on its own.
+`pancake` is the kid holding a folded jianbing in both hands — the bubble reads
+我要吃煎饼. It is the default pose and a carry mode: the pet keeps holding the
+pancake while it strolls, puts it down only while the agent works, and picks it
+back up afterwards. Choose another pose from the menu to send it back to `idle`,
+or click 我要吃煎饼 again to stop carrying.
 
 ![states](docs/states.png)
 

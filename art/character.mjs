@@ -25,7 +25,7 @@ export const PALETTE = {
 };
 
 export const STATES = [
-  'idle', 'tease', 'eat', 'pancake', 'heart', 'face', 'work', 'work-success',
+  'pancake', 'idle', 'tease', 'eat', 'heart', 'face', 'work', 'work-success',
   'work-fail', 'sleep', 'sleeping', 'snack', 'sneeze', 'yawn',
 ];
 
