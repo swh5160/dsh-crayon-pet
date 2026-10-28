@@ -9,7 +9,7 @@ Draggable, pokes back, follows the agent's work state, and takes your own skins.
 
 ```powershell
 # from GitHub (pin a tag to be safe)
-dsh plugin --profile web add github:swh5160/dsh-crayon-pet#v1.0.0
+dsh plugin --profile web add github:swh5160/dsh-crayon-pet#v1.0.1
 
 # or from npm
 dsh plugin --profile web add dsh-crayon-pet

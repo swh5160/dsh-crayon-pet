@@ -1,4 +1,9 @@
-window.__ModuleLoader__.load({
+// A live DSH session keeps its client module graph in memory, so replacing this
+// bundle while the app runs can make the same factory register twice (old id and
+// new id resolving to the same file). That duplicate is harmless — the first
+// registration already installed the pet — so it must not break the boot.
+try {
+  window.__ModuleLoader__.load({
   id: 'dsh-crayon-pet',
   factory(require) {
     const React = require('react');
@@ -401,4 +406,7 @@ window.__ModuleLoader__.load({
       },
     };
   },
-});
+  });
+} catch (error) {
+  if (!/duplicate factory registration/i.test(String(error && error.message))) throw error;
+}
