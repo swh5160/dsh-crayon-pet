@@ -16,6 +16,7 @@ try {
     const STORE_KEY = 'dsh.crayon-pet.v1';
     const SCALE = 128;
     const ASPECT = 220 / 200;
+    const WALK_SPEED = 105; // px per second
 
     const DICT = {
       zh: {
@@ -26,9 +27,11 @@ try {
         builtin: '内置',
         hide: '先藏起来',
         show: '叫它出来',
+        stroll: '溜达一下',
         tip: '左键戳一下有反应，按住可以拖走，右键打开菜单。',
         diy: '自定义形象：把 pet.json 放到 $DSH_HOME/pets/<id>/ 再打开菜单。',
         sizes: ['小', '中', '大'],
+        walk: '溜达中',
         states: {
           idle: '发呆', tease: '逗你', eat: '吃饭', heart: '比心', face: '鬼脸',
           work: '干活中', 'work-success': '干完啦', 'work-fail': '搞砸了',
@@ -43,9 +46,11 @@ try {
         builtin: 'Built-in',
         hide: 'Hide for now',
         show: 'Call it back',
+        stroll: 'Take a stroll',
         tip: 'Click to poke it, drag to move, right-click for the menu.',
         diy: 'DIY skin: drop pet.json into $DSH_HOME/pets/<id>/ then reopen the menu.',
         sizes: ['S', 'M', 'L'],
+        walk: 'Wandering',
         states: {
           idle: 'Idle', tease: 'Tease', eat: 'Eat', heart: 'Love', face: 'Silly',
           work: 'Working', 'work-success': 'Done', 'work-fail': 'Oops',
@@ -58,17 +63,30 @@ try {
 .cp-wrap{position:fixed;z-index:60;pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none;cursor:grab;transition:filter .2s}
 .cp-wrap:hover{filter:brightness(1.02)}
 .cp-wrap:active{cursor:grabbing}
+.cp-flip{display:block;transform-origin:50% 100%;transition:transform .18s ease}
 .cp-art{animation:cp-bob 3.4s ease-in-out infinite;transform-origin:50% 100%;
   filter:drop-shadow(0 6px 9px rgba(70,45,25,.20))}
 .cp-art[data-state="work"]{animation-duration:1.5s}
 .cp-art[data-state="work-success"]{animation:cp-hop .6s ease-in-out infinite}
 .cp-art[data-state="work-fail"]{animation:cp-shake 1.8s ease-in-out infinite}
 .cp-art[data-state="sleep"],.cp-art[data-state="sleeping"]{animation-duration:6.5s}
+.cp-art[data-walk="1"]{animation:cp-walk .5s ease-in-out infinite}
 .cp-svg,.cp-svg svg{width:100%;height:100%;display:block}
 .cp-img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none}
+.cp-bubble{position:absolute;left:50%;bottom:100%;transform:translate(-50%,-3px);
+  padding:3px 9px;border-radius:11px;font-size:11px;line-height:1.45;white-space:nowrap;
+  background:var(--dsw-alias-bg-overlay,#fff);color:var(--dsw-alias-label-primary,#333);
+  border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.1));
+  box-shadow:0 4px 12px rgba(0,0,0,.10);pointer-events:none}
+.cp-bubble::after{content:'';position:absolute;left:50%;bottom:-4.5px;width:8px;height:8px;
+  background:var(--dsw-alias-bg-overlay,#fff);
+  border-right:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.1));
+  border-bottom:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.1));
+  transform:translateX(-50%) rotate(45deg)}
 @keyframes cp-bob{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-4px) rotate(-.7deg)}}
 @keyframes cp-hop{0%,100%{transform:translateY(0) scale(1)}45%{transform:translateY(-10px) scale(1.04)}}
 @keyframes cp-shake{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-3deg)}75%{transform:rotate(3deg)}}
+@keyframes cp-walk{0%,100%{transform:translateY(0) rotate(-1.6deg)}50%{transform:translateY(-5px) rotate(1.6deg)}}
 .cp-menu{position:fixed;z-index:61;width:244px;box-sizing:border-box;padding:10px 10px 8px;
   background:var(--dsw-alias-bg-overlay,#fff);color:var(--dsw-alias-label-primary,#1a1a1a);
   border:1px solid var(--dsw-alias-border-l1,rgba(0,0,0,.1));border-radius:14px;
@@ -145,15 +163,52 @@ try {
       const [menu, setMenu] = useState(null);
       const [state, setState] = useState('idle');
       const [blink, setBlink] = useState(false);
+      const [walk, setWalk] = useState({ ms: 0, dir: 1 });
 
+      const wrapRef = useRef(null);
       const posRef = useRef(pos);
       const dragRef = useRef(null);
       const tempRef = useRef(null);
+      const walkEndRef = useRef(null);
+      const walkingRef = useRef(false);
+      const runningRef = useRef(false);
       const lastTouch = useRef(Date.now());
       const stateRef = useRef('idle');
       stateRef.current = state;
 
       useEffect(() => { posRef.current = pos; }, [pos]);
+
+      // Pin the default right/bottom anchor to pixels, so a later walk has a
+      // numeric left/top to animate from.
+      useEffect(() => {
+        if (pos) return;
+        const el = wrapRef.current;
+        if (!el) return;
+        const r = el.getBoundingClientRect();
+        const pinned = { x: Math.round(r.left), y: Math.round(r.top) };
+        posRef.current = pinned;
+        setPos(pinned);
+      }, [pos]);
+
+      useEffect(() => {
+        const onResize = () => {
+          const el = wrapRef.current;
+          if (!el) return;
+          const r = el.getBoundingClientRect();
+          const maxX = Math.max(0, window.innerWidth - r.width);
+          const maxY = Math.max(0, window.innerHeight - r.height);
+          setPos((cur) => {
+            if (!cur) return cur;
+            const next = { x: clamp(cur.x, 0, maxX), y: clamp(cur.y, 0, maxY) };
+            if (next.x === cur.x && next.y === cur.y) return cur;
+            posRef.current = next;
+            saveStore({ pos: next });
+            return next;
+          });
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+      }, []);
 
       const running = typeof props.useSessionStatus === 'function'
         ? props.useSessionStatus((m) => {
@@ -163,33 +218,90 @@ try {
           return any;
         })
         : false;
+      runningRef.current = running;
 
+      const stopWalk = useCallback(() => {
+        if (walkEndRef.current) {
+          window.clearTimeout(walkEndRef.current);
+          walkEndRef.current = null;
+        }
+        if (walkingRef.current) {
+          walkingRef.current = false;
+          setWalk({ ms: 0, dir: 1 });
+          saveStore({ pos: posRef.current });
+        }
+      }, []);
+
+      // A reaction is a temporary overlay: it always falls back to the base state,
+      // which is `work` while the agent is running — not `idle`.
       const setTemp = useCallback((name, ms) => {
         setState(name);
         if (tempRef.current) window.clearTimeout(tempRef.current);
         tempRef.current = window.setTimeout(() => {
-          setState((cur) => (cur === name ? 'idle' : cur));
+          setState((cur) => (cur === name ? (runningRef.current ? 'work' : 'idle') : cur));
         }, ms);
       }, []);
 
       useEffect(() => () => {
         if (tempRef.current) window.clearTimeout(tempRef.current);
+        if (walkEndRef.current) window.clearTimeout(walkEndRef.current);
       }, []);
 
       const prevRunning = useRef(false);
       useEffect(() => {
         if (running) {
           if (tempRef.current) { window.clearTimeout(tempRef.current); tempRef.current = null; }
+          stopWalk();
           setState('work');
         } else if (prevRunning.current) {
           setTemp('work-success', 3600);
         }
         prevRunning.current = running;
-      }, [running, setTemp]);
+      }, [running, setTemp, stopWalk]);
+
+      const startWalk = useCallback(() => {
+        if (walkingRef.current) return;
+        const el = wrapRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        const margin = 18;
+        const span = Math.max(1, window.innerWidth - rect.width - margin * 2);
+        let targetX = margin + Math.random() * span;
+        if (Math.abs(targetX - rect.left) < 70) {
+          targetX = rect.left < window.innerWidth / 2
+            ? margin + span * 0.75
+            : margin + span * 0.25;
+        }
+        const from = { x: Math.round(rect.left), y: Math.round(rect.top) };
+        const to = { x: Math.round(targetX), y: from.y };
+        const ms = Math.round(clamp((Math.abs(to.x - from.x) / WALK_SPEED) * 1000, 900, 5200));
+        const dir = to.x < from.x ? -1 : 1;
+        walkingRef.current = true;
+        setWalk({ ms, dir });
+        setPos(to);
+        posRef.current = to;
+        walkEndRef.current = window.setTimeout(() => {
+          walkingRef.current = false;
+          walkEndRef.current = null;
+          setWalk({ ms: 0, dir });
+          saveStore({ pos: posRef.current });
+        }, ms + 80);
+      }, []);
 
       useEffect(() => {
         const id = window.setInterval(() => {
-          if (running || stateRef.current !== 'idle') return;
+          if (hidden || runningRef.current) return;
+          if (walkingRef.current || stateRef.current !== 'idle') return;
+          if (Date.now() - lastTouch.current < 6000) return;
+          if (Math.random() > 0.7) return;
+          startWalk();
+        }, 7000);
+        return () => window.clearInterval(id);
+      }, [hidden, startWalk]);
+
+      useEffect(() => {
+        const id = window.setInterval(() => {
+          if (running || walkingRef.current || stateRef.current !== 'idle') return;
           const idle = Date.now() - lastTouch.current;
           if (idle > 240000) setState('sleeping');
           else if (idle > 150000) setState('sleep');
@@ -199,7 +311,7 @@ try {
 
       useEffect(() => {
         const id = window.setInterval(() => {
-          if (running || stateRef.current !== 'idle' || Math.random() > 0.45) return;
+          if (running || walkingRef.current || stateRef.current !== 'idle' || Math.random() > 0.45) return;
           const pick = ['tease', 'face', 'yawn', 'sneeze', 'snack', 'eat'][Math.floor(Math.random() * 6)];
           setTemp(pick, 2800);
         }, 21000);
@@ -240,13 +352,15 @@ try {
 
       const poke = useCallback(() => {
         lastTouch.current = Date.now();
+        stopWalk();
         if (stateRef.current === 'sleep' || stateRef.current === 'sleeping') { setState('idle'); return; }
         const pick = ['tease', 'heart', 'face', 'heart', 'sneeze'][Math.floor(Math.random() * 5)];
         setTemp(pick, 2400);
-      }, [setTemp]);
+      }, [setTemp, stopWalk]);
 
       const onPointerDown = (e) => {
         if (e.button !== 0) return;
+        stopWalk();
         const rect = e.currentTarget.getBoundingClientRect();
         dragRef.current = {
           dx: e.clientX - rect.left, dy: e.clientY - rect.top,
@@ -286,7 +400,7 @@ try {
         lastTouch.current = Date.now();
         loadPets();
         const w = 252;
-        const hgt = 340;
+        const hgt = 380;
         setMenu({
           x: clamp(e.clientX, 8, Math.max(8, window.innerWidth - w - 8)),
           y: clamp(e.clientY, 8, Math.max(8, window.innerHeight - hgt - 8)),
@@ -299,14 +413,21 @@ try {
       const active = customs.find((p) => p.id === petId);
       const frameState = active ? (active.frames[state] ? state : (active.frames.idle ? 'idle' : state)) : state;
       const svg = (state === 'idle' && blink && FRAMES['idle-blink']) ? FRAMES['idle-blink'] : (FRAMES[state] || FRAMES.idle);
+      const walking = walk.ms > 0;
 
-      const wrapStyle = pos
-        ? { left: pos.x + 'px', top: pos.y + 'px' }
-        : { right: '22px', bottom: '10px' };
+      const wrapStyle = Object.assign(
+        pos ? { left: pos.x + 'px', top: pos.y + 'px' } : { right: '22px', bottom: '10px' },
+        walking
+          ? { transition: `left ${walk.ms}ms linear, top ${walk.ms}ms linear` }
+          : { transition: 'none' },
+      );
+
+      const label = walking ? t('walk') : ((dict.states && dict.states[state]) || state);
 
       const art = h('div', {
         className: 'cp-art',
         'data-state': state,
+        'data-walk': walking ? '1' : '0',
         style: { width: width + 'px', height: height + 'px' },
       }, active
         ? h('img', {
@@ -336,15 +457,16 @@ try {
       },
       h('div', { className: 'cp-menu-head' },
         h('strong', null, active ? active.name : t('builtinName')),
-        h('span', null, 'v1.0'),
+        h('span', null, 'v1.1'),
       ),
       h('div', { className: 'cp-sec' }, t('state')),
       chips(ORDER.map((k) => ({ key: k, label: (dict.states && dict.states[k]) || k })), state, (k) => {
         setMenu(null);
+        stopWalk();
         setTemp(k, 4200);
       }),
       h('div', { className: 'cp-sec' }, t('size')),
-      chips(dict.sizes.map((label, i) => ({ key: 's' + i, label })), 's' + scaleIdx, (k) => {
+      chips(dict.sizes.map((label2, i) => ({ key: 's' + i, label: label2 })), 's' + scaleIdx, (k) => {
         const idx = Number(k.slice(1));
         setScaleIdx(idx);
         saveStore({ scaleIdx: idx });
@@ -357,6 +479,10 @@ try {
         setMenu(null);
       }),
       h('div', { className: 'cp-row' },
+        h('button', {
+          className: 'cp-chip',
+          onClick: () => { setMenu(null); startWalk(); },
+        }, t('stroll')),
         h('button', {
           className: 'cp-chip',
           onClick: () => { setHidden(true); saveStore({ hidden: true }); setMenu(null); },
@@ -382,6 +508,7 @@ try {
         h('style', null, CSS),
         h('div', {
           className: 'cp-wrap',
+          ref: wrapRef,
           style: wrapStyle,
           onPointerDown,
           onPointerMove,
@@ -390,7 +517,12 @@ try {
           onDoubleClick: () => setTemp('heart', 2200),
           onPointerEnter: () => { lastTouch.current = Date.now(); },
           title: t('tip'),
-        }, art),
+        },
+        h('div', { className: 'cp-bubble' }, label),
+        h('div', {
+          className: 'cp-flip',
+          style: { transform: walking && walk.dir < 0 ? 'scaleX(-1)' : 'none' },
+        }, art)),
         menuEl);
     }
 

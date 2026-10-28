@@ -9,7 +9,7 @@ Draggable, pokes back, follows the agent's work state, and takes your own skins.
 
 ```powershell
 # from GitHub (pin a tag to be safe)
-dsh plugin --profile web add github:swh5160/dsh-crayon-pet#v1.0.1
+dsh plugin --profile web add github:swh5160/dsh-crayon-pet#v1.1.0
 
 # or from npm
 dsh plugin --profile web add dsh-crayon-pet
@@ -30,11 +30,17 @@ dsh plugin --profile web remove dsh-crayon-pet
 
 | Action | Result |
 | --- | --- |
-| left click | random reaction (tease / heart / silly face / sneeze); wakes it up if asleep |
+| left click | random reaction (tease / heart / silly face / sneeze); wakes it up if asleep; afterwards it returns to whatever it was doing — poking it while the agent works sends it back to `work`, not `idle` |
 | drag | move it; the position is remembered |
-| right click | menu: pose, size, skin, hide |
+| right click | menu: pose, size, skin, stroll, hide |
+| 溜达一下 / stroll | send it for a walk right now |
 | double click | blow a heart |
 | after hiding | a small translucent dot stays in the corner; click it to bring the pet back |
+
+A small speech bubble above its head names the current state (干活中 / 干完啦 / 困了 /
+溜达中 …), so the pet doubles as a status indicator.
+
+![label](docs/label.png)
 
 Automatic behaviour:
 
@@ -42,6 +48,8 @@ Automatic behaviour:
 - run finishes → `work-success` with sparkles for 3.6 s, then `idle`
 - idle for 2.5 min → `sleep`, 4 min → `sleeping`
 - roughly every 20 s it does something on its own (yawn, snack, tease)
+- while idle it wanders across the screen every so often: it walks to a random
+  spot with a bobbing stride and turns to face the direction it moves in
 - idle has a breathing bob and blinks every 3.6 s
 
 ## States
