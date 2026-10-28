@@ -25,7 +25,7 @@ export const PALETTE = {
 };
 
 export const STATES = [
-  'idle', 'tease', 'eat', 'heart', 'face', 'work', 'work-success',
+  'idle', 'tease', 'eat', 'pancake', 'heart', 'face', 'work', 'work-success',
   'work-fail', 'sleep', 'sleeping', 'snack', 'sneeze', 'yawn',
 ];
 
@@ -157,14 +157,14 @@ function mouth(x, y, kind) {
   }
 }
 
-function face({ eyes: eyeKind = 'open', winkRight = false, mouth: mouthKind = 'smile', brow: browKind = 'normal', blush = 0.45, tears = false }) {
+function face({ eyes: eyeKind = 'open', winkRight = false, mouth: mouthKind = 'smile', brow: browKind = 'normal', blush = 0.45, tears = false, mouthY = 114 }) {
   let out = '';
   out += el('ellipse', { cx: 65, cy: 111, rx: 9.5, ry: 6.5, fill: C.blush, opacity: blush });
   out += el('ellipse', { cx: 135, cy: 111, rx: 9.5, ry: 6.5, fill: C.blush, opacity: blush });
   out += ink('M 97,108 Q 100,105 103,108', { 'stroke-width': 2.4 });
   out += brow(78, browKind, -1) + brow(78, browKind, 1);
   out += eye(79, 96, eyeKind) + eye(121, 96, winkRight ? 'wink' : eyeKind);
-  out += mouth(100, 114, mouthKind);
+  out += mouth(100, mouthY, mouthKind);
   if (tears) {
     out += shape('M 64,100 C 58,108 58,114 64,114 C 70,114 70,108 64,100 Z', C.sweat, { 'stroke-width': 2, opacity: 0.85 });
     out += shape('M 136,100 C 130,108 130,114 136,114 C 142,114 142,108 136,100 Z', C.sweat, { 'stroke-width': 2, opacity: 0.85 });
@@ -243,6 +243,28 @@ function cookie(x, y, s = 1) {
     + '</g>';
 }
 
+/** A folded jianbing held in both hands: crepe, egg, sauce, scallion, paper wrap. */
+function pancake(x, y, s = 1) {
+  const scallion = (cx, cy) => el('ellipse', { cx, cy, rx: 2.1, ry: 1.3, fill: '#4f9b52', transform: `rotate(-18 ${cx} ${cy})` });
+  return `<g transform="translate(${x} ${y}) scale(${s})">`
+    // paper wrap
+    + shape('M -16,6 L 16,6 L 13,25 Q 0,28 -13,25 Z', '#f6f0e2', { 'stroke-width': 2.6 })
+    + ink('M -13,12 L 13,12', { 'stroke-width': 2, opacity: 0.3 })
+    // crepe body
+    + shape('M -25,-4 C -27,-20 -14,-27 0,-27 C 14,-27 27,-20 25,-4 C 23,8 12,15 0,15 C -12,15 -23,8 -25,-4 Z', '#f2c463', { 'stroke-width': 3 })
+    // egg spread
+    + shape('M -13,-9 C -9,-18 9,-18 13,-9 C 13,-2 -13,-2 -13,-9 Z', '#ffe9ae', { 'stroke-width': 2 })
+    // crispy edge
+    + ink('M -18,-2 Q 0,7 18,-2', { stroke: '#c08427', 'stroke-width': 2.6 })
+    // sauce
+    + ink('M -15,-13 Q -9,-8 -3,-12 Q 3,-16 9,-11 Q 13,-8 16,-11', { stroke: '#c9522f', 'stroke-width': 2.4 })
+    // scallion
+    + scallion(-6, -5) + scallion(2, -6) + scallion(7, -3) + scallion(-1, 4) + scallion(6, 6)
+    // fold shadow
+    + ink('M 0,-25 L 0,13', { 'stroke-width': 1.8, opacity: 0.18 })
+    + '</g>';
+}
+
 function zzz(x, y, s = 1, opacity = 1) {
   const z = (dx, dy, k) => `<g transform="translate(${x + dx * s} ${y + dy * s}) scale(${k * s})">`
     + ink('M -6,-6 L 6,-6 L -6,6 L 6,6', { stroke: C.zzz, 'stroke-width': 4, opacity })
@@ -285,7 +307,7 @@ function standing({ eyes = 'open', mouth: m = 'smile', brow = 'normal', tilt = 0
   lArm = [[72, 138], [58, 160], [55, 179]], rArm = [[128, 138], [142, 160], [145, 179]],
   lLeg = [[88, 181], [87, 194], [87, 204]], rLeg = [[112, 181], [113, 194], [113, 204]],
   shoes = [[81, 206, -1], [119, 206, 1]], blush = 0.45, tears = false,
-  winkRight = false, shirt = C.shirt } = {}) {
+  winkRight = false, mouthY, shirt = C.shirt } = {}) {
   let out = `<g transform="rotate(${lean} 100 175)">`;
   out += leg(lLeg[0], lLeg[1], lLeg[2], { shorts: C.shorts });
   out += leg(rLeg[0], rLeg[1], rLeg[2], { shorts: C.shorts });
@@ -294,7 +316,7 @@ function standing({ eyes = 'open', mouth: m = 'smile', brow = 'normal', tilt = 0
   out += torso({ shirt });
   out += arm(-1, lArm[0], lArm[1], lArm[2], { shirt });
   out += arm(1, rArm[0], rArm[1], rArm[2], { shirt });
-  out += head({ eyes, mouth: m, brow, tilt, blush, tears, winkRight });
+  out += head({ eyes, mouth: m, brow, tilt, blush, tears, winkRight, mouthY });
   out += '</g>';
   return out;
 }
@@ -325,6 +347,18 @@ export function render(state) {
         rArm: [[128, 138], [122, 128], [112, 126]],
       });
       props = onigiri(100, 130, 1.2) + hands([[88, 126], [112, 126]]);
+      break;
+    case 'pancake':
+      body = standing({
+        eyes: 'happy', mouth: 'open', mouthY: 108, brow: 'raised', tilt: -4, lean: -2, blush: 0.62,
+        lArm: [[72, 138], [56, 158], [76, 148]],
+        rArm: [[128, 138], [144, 158], [124, 148]],
+      });
+      props = pancake(100, 148, 1) + hands([[76, 144], [124, 144]])
+        + ink('M 46,80 Q 40,90 46,100', { stroke: '#b9a184', 'stroke-width': 3.4, opacity: 0.8 })
+        + ink('M 36,75 Q 28,90 36,105', { stroke: '#b9a184', 'stroke-width': 3.4, opacity: 0.5 })
+        + ink('M 154,80 Q 160,90 154,100', { stroke: '#b9a184', 'stroke-width': 3.4, opacity: 0.8 })
+        + ink('M 164,75 Q 172,90 164,105', { stroke: '#b9a184', 'stroke-width': 3.4, opacity: 0.5 });
       break;
     case 'heart':
       body = standing({

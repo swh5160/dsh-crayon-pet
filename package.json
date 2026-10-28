@@ -1,6 +1,6 @@
 {
   "name": "dsh-crayon-pet",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Crayon-doodle desktop pet for the DSH Web GUI: draggable, clickable, 13 animation states, follows the agent's work state, ships with switchable skins.",
   "license": "MIT",
   "type": "module",

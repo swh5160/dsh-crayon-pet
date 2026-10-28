@@ -33,7 +33,7 @@ try {
         sizes: ['小', '中', '大'],
         walk: '溜达中',
         states: {
-          idle: '发呆', tease: '逗你', eat: '吃饭', heart: '比心', face: '鬼脸',
+          idle: '发呆', tease: '逗你', eat: '吃饭', pancake: '我要吃煎饼', heart: '比心', face: '鬼脸',
           work: '干活中', 'work-success': '干完啦', 'work-fail': '搞砸了',
           sleep: '困了', sleeping: '睡着了', snack: '偷吃', sneeze: '打喷嚏', yawn: '打哈欠',
         },
@@ -52,7 +52,7 @@ try {
         sizes: ['S', 'M', 'L'],
         walk: 'Wandering',
         states: {
-          idle: 'Idle', tease: 'Tease', eat: 'Eat', heart: 'Love', face: 'Silly',
+          idle: 'Idle', tease: 'Tease', eat: 'Eat', pancake: 'Pancake time!', heart: 'Love', face: 'Silly',
           work: 'Working', 'work-success': 'Done', 'work-fail': 'Oops',
           sleep: 'Sleepy', sleeping: 'Asleep', snack: 'Snack', sneeze: 'Sneeze', yawn: 'Yawn',
         },
@@ -312,7 +312,7 @@ try {
       useEffect(() => {
         const id = window.setInterval(() => {
           if (running || walkingRef.current || stateRef.current !== 'idle' || Math.random() > 0.45) return;
-          const pick = ['tease', 'face', 'yawn', 'sneeze', 'snack', 'eat'][Math.floor(Math.random() * 6)];
+          const pick = ['tease', 'face', 'yawn', 'sneeze', 'snack', 'eat', 'pancake'][Math.floor(Math.random() * 7)];
           setTemp(pick, 2800);
         }, 21000);
         return () => window.clearInterval(id);
@@ -355,7 +355,7 @@ try {
         stopWalk();
         if (stateRef.current === 'sleep' || stateRef.current === 'sleeping') { setState('idle'); return; }
         const pick = ['tease', 'heart', 'face', 'heart', 'sneeze'][Math.floor(Math.random() * 5)];
-        setTemp(pick, 2400);
+        setTemp(pick, 2000);
       }, [setTemp, stopWalk]);
 
       const onPointerDown = (e) => {
@@ -457,7 +457,7 @@ try {
       },
       h('div', { className: 'cp-menu-head' },
         h('strong', null, active ? active.name : t('builtinName')),
-        h('span', null, 'v1.1'),
+        h('span', null, 'v1.2'),
       ),
       h('div', { className: 'cp-sec' }, t('state')),
       chips(ORDER.map((k) => ({ key: k, label: (dict.states && dict.states[k]) || k })), state, (k) => {
@@ -514,7 +514,7 @@ try {
           onPointerMove,
           onPointerUp,
           onContextMenu: openMenu,
-          onDoubleClick: () => setTemp('heart', 2200),
+          onDoubleClick: () => setTemp('heart', 2000),
           onPointerEnter: () => { lastTouch.current = Date.now(); },
           title: t('tip'),
         },

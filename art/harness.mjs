@@ -51,6 +51,14 @@ const steps = {
     clickPet();
     await sleep(3200);
     diag({ bubble: bubble(), state: state(), expect: 'work' });`,
+  pancake: `
+    render();
+    await sleep(250);
+    openMenu();
+    await sleep(200);
+    const hit = clickText(PANCAKE);
+    await sleep(400);
+    diag({ chip: hit, bubble: bubble(), state: state() });`,
   walk: `
     render();
     await sleep(300);
@@ -81,6 +89,7 @@ ${clean ? '#diag{display:none}' : ''}</style>
 </head><body><div id="root"></div><pre id="diag">running...</pre>
 <script>
 const STROLL = String.fromCharCode(0x6E9C, 0x8FBE, 0x4E00, 0x4E0B);
+const PANCAKE = String.fromCharCode(0x6211, 0x8981, 0x5403, 0x714E, 0x997C);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const diag = (v) => { document.getElementById('diag').textContent = JSON.stringify(v, null, 2); window.__diag = v; };
 let status = new Map();
@@ -138,10 +147,12 @@ const clickText = (text) => {
 const page = join(out, `harness-${step}.html`);
 writeFileSync(page, html, 'utf8');
 const url = `file:///${page.replace(/\\/g, '/')}`;
+// A step that shows a temporary reaction must be captured inside its window.
+const budget = step === 'pancake' ? 2000 : 12000;
 
 const dom = execFileSync(CHROME, [
   '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
-  '--no-default-browser-check', '--virtual-time-budget=12000',
+  '--no-default-browser-check', `--virtual-time-budget=${budget}`,
   '--window-size=900,700', '--dump-dom', url,
 ], { stdio: 'pipe' }).toString('utf8');
 writeFileSync(join(out, `harness-${step}.dom.html`), dom, 'utf8');
@@ -153,7 +164,7 @@ console.log(`${step} => ${text.length > 500 ? `${text.slice(0, 500)} ...` : text
 if (shotPath) {
   execFileSync(CHROME, [
     '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run',
-    '--no-default-browser-check', '--virtual-time-budget=12000',
+    '--no-default-browser-check', `--virtual-time-budget=${budget}`,
     '--force-device-scale-factor=1.5',
     '--window-size=900,700', `--screenshot=${shotPath}`, url,
   ], { stdio: 'pipe' });

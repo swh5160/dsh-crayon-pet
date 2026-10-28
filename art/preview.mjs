@@ -39,6 +39,9 @@ const which = process.argv[2] || 'idle';
 
 if (which === 'idle') {
   shoot(page(`<div class="stage">${svgFor('idle', 520)}</div>`), 'idle', 600, 660);
+} else if (which === 'state') {
+  const name = process.argv[3] || 'idle';
+  shoot(page(`<div class="stage">${svgFor(name, 520)}</div>`), `state-${name}`, 600, 660);
 } else if (which === 'sizes') {
   const row = () => [0.55, 0.75, 1, 1.35]
     .map((k) => `<div class="slot"><div class="box">${svgFor('idle', 120 * k)}</div><div class="cap">${Math.round(120 * k)}px</div></div>`)
@@ -110,6 +113,6 @@ if (which === 'idle') {
     .art{height:212px;display:flex;align-items:flex-end}
     .label{font-size:12px;color:#7b6a58;letter-spacing:.06em;margin-top:4px}
   </style></head><body><div class="wrap"><h1>蜡笔小新风 · 桌面宠物 状态表</h1>
-  <p class="sub">crayon-doodle desktop pet / 13 states</p><div class="grid">${cells}</div></div></body></html>`,
+  <p class="sub">crayon-doodle desktop pet / ${STATES.length} states</p><div class="grid">${cells}</div></div></body></html>`,
     'sheet', w, h, 2, false);
 }
