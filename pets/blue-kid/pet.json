@@ -1,0 +1,19 @@
+{
+  "name": "蓝衫男孩",
+  "scale": 1,
+  "frames": {
+    "idle": "idle.svg",
+    "tease": "tease.svg",
+    "eat": "eat.svg",
+    "heart": "heart.svg",
+    "face": "face.svg",
+    "work": "work.svg",
+    "work-success": "work-success.svg",
+    "work-fail": "work-fail.svg",
+    "sleep": "sleep.svg",
+    "sleeping": "sleeping.svg",
+    "snack": "snack.svg",
+    "sneeze": "sneeze.svg",
+    "yawn": "yawn.svg"
+  }
+}

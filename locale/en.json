@@ -1,0 +1,9 @@
+{
+  "meta": {
+    "title": "Crayon Pet",
+    "description": "A crayon-doodle kid living in the corner of the Web GUI: draggable, pokes back, follows the agent's work state, and accepts your own skins."
+  },
+  "pet": {
+    "name": "Crayon Kid"
+  }
+}

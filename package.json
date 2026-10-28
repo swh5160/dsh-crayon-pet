@@ -1,0 +1,47 @@
+{
+  "name": "dsh-crayon-pet",
+  "version": "1.0.0",
+  "description": "Crayon-doodle desktop pet for the DSH Web GUI: draggable, clickable, 13 animation states, follows the agent's work state, ships with switchable skins.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "desktop-pet",
+    "crayon",
+    "svg"
+  ],
+  "homepage": "https://github.com/swh5160/dsh-crayon-pet#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/swh5160/dsh-crayon-pet.git"
+  },
+  "bugs": {
+    "url": "https://github.com/swh5160/dsh-crayon-pet/issues"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "pets/**",
+    "docs/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  }
+}
